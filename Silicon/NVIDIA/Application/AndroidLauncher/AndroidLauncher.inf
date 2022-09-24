@@ -1,0 +1,69 @@
+## @file
+#  Application to launch Android A/B.
+#
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2022 The LineageOS Project
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001b
+  BASE_NAME                      = AndroidLauncher
+  FILE_GUID                      = bc5787cc-8f68-4b4d-b81c-3ff897541f51
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = AndroidLauncher
+  MODULE_UNI_FILE                = AndroidLauncher.uni
+
+
+[Sources]
+  AndroidLauncher.c
+  L4TRootfsValidation.c
+
+[Packages]
+  EmbeddedPkg/EmbeddedPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ShellPkg/ShellPkg.dec
+  Silicon/NVIDIA/NVIDIA.dec
+  SecurityPkg/SecurityPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiApplicationEntryPoint
+  BaseMemoryLib
+  DebugLib
+  DevicePathLib
+  UefiLib
+  HandleParsingLib
+  PrintLib
+  FileHandleLib
+  UefiRuntimeServicesTableLib
+  AndroidBootImgLib
+  SecureBootVariableLib
+  PlatformResourceLib
+  ResetSystemLib
+  TimerLib
+
+[Guids]
+  gNVIDIAPublicVariableGuid
+  gFdtTableGuid
+  gEfiSecureBootEnableDisableGuid
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiDevicePathProtocolGuid
+  gEfiPartitionInfoProtocolGuid
+  gAndroidBootImgProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiDiskIoProtocolGuid
+  gEfiLoadFile2ProtocolGuid
+
+[Pcd]
+  gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  AndroidLauncherExtra.uni
+

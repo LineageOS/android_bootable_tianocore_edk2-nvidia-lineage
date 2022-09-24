@@ -304,6 +304,11 @@
   Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
 
   #
+  # Android launcher
+  #
+  Silicon/NVIDIA/Application/AndroidLauncher/AndroidLauncher.inf
+
+  #
   # UFS support
   #
   Silicon/NVIDIA/Drivers/UfsControllerDxe/UfsControllerDxe.inf
