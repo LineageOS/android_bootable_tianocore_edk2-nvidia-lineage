@@ -61,6 +61,9 @@
   gEfiDiskIoProtocolGuid
   gEfiLoadFile2ProtocolGuid
 
+[FixedPcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize
 

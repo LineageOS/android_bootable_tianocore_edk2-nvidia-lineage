@@ -359,6 +359,10 @@ BootAndroidStylePartition (
   VOID                    *ExpandedDtb;
   VOID                    *CurrentDtb = NULL;
   VOID                    *AcpiBase;
+  INTN                    NodeOffset;
+  CHAR8                   BootSlot[3];
+  CHAR16                  *FirmwareVersion;
+  CHAR8                   *AsciiFirmwareVersion;
 
   Status = FindPartitionInfo (DeviceHandle, BootImgPartitionBasename, BootParams->BootChain, NULL, &PartitionHandle);
   if (EFI_ERROR (Status)) {
@@ -490,6 +494,22 @@ BootAndroidStylePartition (
       if (EFI_ERROR (Status)) {
         ErrorPrint (L"No existing DTB\r\n");
         goto Exit;
+      }
+
+      NodeOffset = fdt_path_offset (ExpandedDtb, "/firmware/android");
+      if (NodeOffset >= 0) {
+        AsciiSPrint (BootSlot, sizeof (BootSlot), "_%c", 'a' + BootParams->BootChain);
+        fdt_setprop (ExpandedDtb, NodeOffset, "slot_suffix", BootSlot, sizeof (BootSlot));
+        fdt_setprop (ExpandedDtb, NodeOffset, "verifiedbootstate", "orange", sizeof ("orange"));
+        FirmwareVersion = (CHAR16 *)PcdGetPtr (PcdFirmwareVersionString);
+        AsciiFirmwareVersion = AllocatePool (StrLen (FirmwareVersion) + 1);
+        UnicodeStrToAsciiStrS (FirmwareVersion, AsciiFirmwareVersion, StrLen (FirmwareVersion) + 1);
+        fdt_setprop (ExpandedDtb, NodeOffset, "bootloader", AsciiFirmwareVersion, StrLen (FirmwareVersion));
+        if (BootParams->BootMode == NVIDIA_L4T_BOOTMODE_BOOTIMG) {
+          fdt_setprop (ExpandedDtb, NodeOffset, "kerneltype", "normal", StrLen (L"normal"));
+        } else if (BootParams->BootMode == NVIDIA_L4T_BOOTMODE_RECOVERY) {
+          fdt_setprop (ExpandedDtb, NodeOffset, "kerneltype", "recovery", StrLen (L"recovery"));
+        }
       }
 
       Status = gBS->InstallConfigurationTable (&gFdtTableGuid, ExpandedDtb);
