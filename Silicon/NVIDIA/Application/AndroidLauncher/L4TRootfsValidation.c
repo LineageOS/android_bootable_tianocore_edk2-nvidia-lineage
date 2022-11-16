@@ -684,6 +684,7 @@ ValidateRootfsStatus (
   // When the BootChainOverride value is 0 or 1, the value is set to BootParams->BootChain
   // in ProcessBootParams(), before calling ValidateRootfsStatus()
   mRootfsInfo.CurrentSlot = BootParams->BootChain;
+  NonCurrentSlot = !mRootfsInfo.CurrentSlot;
 
   // Set BootMode to RECOVERY if there is no more valid rootfs
   if (!IsValidRootfs ()) {
@@ -779,7 +780,6 @@ ValidateRootfsStatus (
         }
 
         // Check non-current slot
-        NonCurrentSlot = !mRootfsInfo.CurrentSlot;
         if (IsRootfsSlotBootable (NonCurrentSlot)) {
           // Non-current slot is bootable, switch to it and decrease the RetryCount by 1.
           // Change UEFI boot chain (BootParams->BootChain) will be done at the end of this function
