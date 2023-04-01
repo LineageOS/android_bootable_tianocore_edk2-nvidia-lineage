@@ -1,0 +1,19 @@
+#/** @file
+# JetsonAndroid package.
+#
+# Copyright (c) 2023 The LineageOS Project
+#
+#    SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#**/
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = JetsonAndroidPkg
+  PACKAGE_GUID                   = d154828a-4298-413b-aa8d-7d7bae0757d6
+  PACKAGE_VERSION                = 0.1
+
+[PcdsFixedAtBuild.common]
+# Tegra Scratch0 Register Addresses
+  gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT194|0x0C392000|UINT64|0x00009900
+  gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT234|0x0C392000|UINT64|0x00009901

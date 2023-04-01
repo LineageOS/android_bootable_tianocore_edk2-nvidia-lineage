@@ -20,6 +20,8 @@
 #include <Library/FileHandleLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/AndroidBootImgLib.h>
+#include <Library/IoLib.h>
+#include <Library/TegraPlatformInfoLib.h>
 
 #include <Protocol/DevicePath.h>
 #include <Protocol/LoadedImage.h>
@@ -239,6 +241,37 @@ FindPartitionInfo (
 }
 
 /**
+  Get BootRecovery flag
+
+**/
+STATIC
+EFI_STATUS
+EFIAPI
+GetBootRecovery (
+  IN  UINT32  *BootRecovery
+  )
+{
+  UINTN Address = 0;
+
+  switch (TegraGetChipID ()) {
+    case T234_CHIP_ID:
+      Address = FixedPcdGet64 (PcdScratch0RegisterBaseAddressT234);
+    case T194_CHIP_ID:
+      Address = FixedPcdGet64 (PcdScratch0RegisterBaseAddressT194);
+    default:
+      return EFI_UNSUPPORTED;
+  }
+
+  *BootRecovery = MmioBitFieldRead32 (
+                    Address,
+                    SCRATCH0_RECOVERY_BIT_FIELD,
+                    SCRATCH0_RECOVERY_BIT_FIELD
+                    );
+
+  return EFI_SUCCESS;
+}
+
+/**
   Process the boot mode selection from command line and variables
 
   @param[in]  LoadedImage     The LoadedImage protocol for this execution
@@ -260,6 +293,7 @@ ProcessBootParams (
   UINT32        BootChain;
   UINTN         DataSize;
   UINT64        StringValue;
+  UINT32        BootRecovery;
 
   if ((LoadedImage == NULL) || (BootParams == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -267,6 +301,11 @@ ProcessBootParams (
 
   BootParams->BootChain = 0;
   BootParams->BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
+
+  Status = GetBootRecovery (&BootRecovery);
+  if (!EFI_ERROR (Status) && BootRecovery > 0) {
+    BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
+  }
 
   DataSize = sizeof (BootChain);
   Status   = gRT->GetVariable (BOOT_FW_VARIABLE_NAME, &gNVIDIAPublicVariableGuid, NULL, &DataSize, &BootChain);

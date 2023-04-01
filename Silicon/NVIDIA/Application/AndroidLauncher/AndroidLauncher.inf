@@ -26,6 +26,7 @@
   EmbeddedPkg/EmbeddedPkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
+  Platform/NVIDIA/JetsonAndroid/JetsonAndroid.dec
   ShellPkg/ShellPkg.dec
   Silicon/NVIDIA/NVIDIA.dec
   SecurityPkg/SecurityPkg.dec
@@ -63,6 +64,8 @@
 
 [FixedPcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
+  gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT194
+  gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT234
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize

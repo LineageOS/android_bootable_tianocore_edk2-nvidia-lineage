@@ -30,4 +30,6 @@
 #define RECOVERY_BASE_NAME      L"recovery"
 #define RECOVERY_DTB_BASE_NAME  L"recovery-dtb"
 
+#define SCRATCH0_RECOVERY_BIT_FIELD 31
+
 #endif /* __ANDROID_LAUNCHER_H_ */
