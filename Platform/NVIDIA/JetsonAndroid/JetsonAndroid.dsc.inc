@@ -26,6 +26,9 @@
 !include Silicon/NVIDIA/Drivers/NvGopDriver/NvGopDriver.dsc.inc
 !include Platform/NVIDIA/NVIDIA.common.dsc.inc
 
+[BuildOptions.common]
+  GCC:*_CLANG38_*_PLATFORM_FLAGS = -fstack-protector-strong -Wno-error=unaligned-access -Wno-error=unused-but-set-variable
+
 [LibraryClasses.common]
   CacheMaintenanceLib|Silicon/NVIDIA/Library/TegraCacheMaintenanceLib/TegraCacheMaintenanceLib.inf
 
