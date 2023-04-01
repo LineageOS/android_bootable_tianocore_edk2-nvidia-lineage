@@ -141,6 +141,11 @@
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
 
+[PcdsFixedAtBuild.common]
+!ifdef $(BOOT_TO_RECOVERY)
+  gNVIDIATokenSpaceGuid.PcdBootToRecovery|TRUE
+!endif
+
 ################################################################################
 #
 # Components Section - list of all EDK II Modules needed by this Platform

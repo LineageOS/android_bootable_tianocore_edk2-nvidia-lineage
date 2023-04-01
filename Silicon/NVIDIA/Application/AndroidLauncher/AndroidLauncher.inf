@@ -66,6 +66,7 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT194
   gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT234
+  gNVIDIATokenSpaceGuid.PcdBootToRecovery
 
 [Pcd]
   gNVIDIATokenSpaceGuid.PcdSignedImageHeaderSize

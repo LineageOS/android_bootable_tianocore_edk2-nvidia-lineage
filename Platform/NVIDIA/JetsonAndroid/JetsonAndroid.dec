@@ -17,3 +17,6 @@
 # Tegra Scratch0 Register Addresses
   gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT194|0x0C392000|UINT64|0x00009900
   gNVIDIATokenSpaceGuid.PcdScratch0RegisterBaseAddressT234|0x0C392000|UINT64|0x00009901
+
+#Force Boot to Recovery
+  gNVIDIATokenSpaceGuid.PcdBootToRecovery|FALSE|BOOLEAN|0x00009902

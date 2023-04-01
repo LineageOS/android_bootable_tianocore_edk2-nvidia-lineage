@@ -303,7 +303,8 @@ ProcessBootParams (
   BootParams->BootMode = NVIDIA_L4T_BOOTMODE_BOOTIMG;
 
   Status = GetBootRecovery (&BootRecovery);
-  if (!EFI_ERROR (Status) && BootRecovery > 0) {
+  if ((!EFI_ERROR (Status) && BootRecovery > 0) ||
+      FixedPcdGetBool (PcdBootToRecovery)) {
     BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
   }
 
