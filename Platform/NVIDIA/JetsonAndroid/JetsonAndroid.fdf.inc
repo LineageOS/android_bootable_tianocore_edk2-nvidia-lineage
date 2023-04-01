@@ -183,3 +183,11 @@
   #
   INF SecurityPkg/Tcg/Tcg2Dxe/Tcg2Dxe.inf
   INF SecurityPkg/Tcg/Tcg2Config/Tcg2ConfigDxe.inf
+
+  #
+  # Logo Files
+  #
+  FILE FREEFORM = gNVIDIAPlatformLogoGuid {
+    SECTION RAW = Platform/NVIDIA/JetsonAndroid/Assets/nvidia720.bmp
+    SECTION RAW = Platform/NVIDIA/JetsonAndroid/Assets/nvidia1080.bmp
+  }
