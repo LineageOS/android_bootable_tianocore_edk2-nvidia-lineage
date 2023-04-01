@@ -33,7 +33,7 @@ READ_ENABLED_CAP   = TRUE
 READ_STATUS        = TRUE
 READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
-FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
+FvNameGuid         = 005dda9c-16d5-44a8-9281-2f24ac8627ce
 
   APRIORI DXE {
     INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
@@ -56,5 +56,5 @@ FvNameGuid         = 49a79a15-8f69-4be7-a30c-a172f44abce7
     }
 
 !include Platform/NVIDIA/NVIDIA.fvmain.fdf.inc
-!include Platform/NVIDIA/Jetson/Jetson.fdf.inc
+!include Platform/NVIDIA/JetsonAndroid/JetsonAndroid.fdf.inc
 !include Platform/NVIDIA/NVIDIA.common.fdf.inc
