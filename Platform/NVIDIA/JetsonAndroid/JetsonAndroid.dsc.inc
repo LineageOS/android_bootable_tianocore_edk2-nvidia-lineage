@@ -140,6 +140,9 @@
 [PcdsFixedAtBuild]
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
+!ifdef $(EDK2_PKCS7_INC)
+  !include $(EDK2_PKCS7_INC)
+!endif
 
 [PcdsFixedAtBuild.common]
 !ifdef $(BOOT_TO_RECOVERY)
