@@ -98,6 +98,7 @@
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy|0
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask|0x00000006
   gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap|0x00000006
+  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|0
 
 [PcdsDynamicDefault.common.T194]
   gArmTokenSpaceGuid.PcdGicDistributorBase|0x03881000
@@ -127,12 +128,6 @@
   gNVIDIATokenSpaceGuid.PcdBrBctDataSize|0x2000
   gNVIDIATokenSpaceGuid.PcdAffinityMpIdrSupported|TRUE
 
-[PcdsDynamicHii.common.T234SLT]
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
-
-[PcdsDynamicHii.common.T234Presil]
-  gEfiMdePkgTokenSpaceGuid.PcdPlatformBootTimeOut|L"Timeout"|gEfiGlobalVariableGuid|0x0|2
-
 [PcdsDynamicDefault.common.T234Presil]
   gNVIDIATokenSpaceGuid.PcdVirtualRTC|TRUE
   gNVIDIATokenSpaceGuid.PcdTegraStmmEnabled|FALSE
@@ -146,6 +141,7 @@
 !ifdef $(EDK2_PKCS7_INC)
   !include $(EDK2_PKCS7_INC)
 !endif
+  gNVIDIATokenSpaceGuid.PcdTegraDisableScreenPrints|TRUE
 
 [PcdsFixedAtBuild.common]
 !ifdef $(BOOT_TO_RECOVERY)
