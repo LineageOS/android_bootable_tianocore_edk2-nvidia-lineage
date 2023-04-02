@@ -107,7 +107,6 @@
 
   INF SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
   INF SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
-  INF SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
 
   #
   # Tegra PWM clock driver

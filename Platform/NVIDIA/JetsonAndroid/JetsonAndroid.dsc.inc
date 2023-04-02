@@ -139,7 +139,6 @@
 
 [PcdsFixedAtBuild]
   gNVIDIATokenSpaceGuid.PcdFramebufferBarIndex|1
-  gNVIDIATokenSpaceGuid.PcdL4TConfigurationSupport|TRUE
   gNVIDIATokenSpaceGuid.PcdFtpmShmSize|4096
 
 ################################################################################
@@ -283,7 +282,6 @@
   #Security drivers
   SecurityPkg/RandomNumberGenerator/RngDxe/RngDxe.inf
   SecurityPkg/Hash2DxeCrypto/Hash2DxeCrypto.inf
-  SecurityPkg/Pkcs7Verify/Pkcs7VerifyDxe/Pkcs7VerifyDxe.inf
 
   #
   # EQOS NIC Support
@@ -304,11 +302,6 @@
   # FSI Support
   #
   Silicon/NVIDIA/Drivers/FSIDxe/FSIDxe.inf
-
-  #
-  # L4T launcher
-  #
-  Silicon/NVIDIA/Application/L4TLauncher/L4TLauncher.inf
 
   #
   # UFS support
