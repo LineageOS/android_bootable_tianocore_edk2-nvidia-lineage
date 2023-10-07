@@ -36,13 +36,13 @@ RF_AB_VARIABLE  mRFAbVariable[RF_VARIABLE_INDEX_MAX] = {
                        EFI_VARIABLE_NON_VOLATILE,
                        sizeof (UINT32),
                        &gNVIDIAPublicVariableGuid },
-  [RF_REDUNDANCY] =  { L"RootfsRedundancyLevel",
+  [RF_RETRY_A] =     { L"RootfsRetrySlotA",
                        EFI_VARIABLE_BOOTSERVICE_ACCESS |
                        EFI_VARIABLE_RUNTIME_ACCESS |
                        EFI_VARIABLE_NON_VOLATILE,
                        sizeof (UINT32),
                        &gNVIDIAPublicVariableGuid },
-  [RF_RETRY_MAX] =   { L"RootfsRetryCountMax",
+  [RF_RETRY_B] =     { L"RootfsRetrySlotB",
                        EFI_VARIABLE_BOOTSERVICE_ACCESS |
                        EFI_VARIABLE_RUNTIME_ACCESS |
                        EFI_VARIABLE_NON_VOLATILE,
@@ -100,25 +100,31 @@ RFGetVariable (
                   Value
                   );
   if (EFI_ERROR (Status)) {
-    // The BootChainFwNext and BootChainFwStatus does not exist by default
-    if ((Status == EFI_NOT_FOUND) &&
-        ((VariableIndex == RF_FW_NEXT) || (VariableIndex == RF_BC_STATUS)))
+    if (Status == EFI_NOT_FOUND)
     {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: Info: %s is not found\n",
-        __FUNCTION__,
-        Variable->Name
-        ));
-      Status = EFI_SUCCESS;
-    } else {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Error getting %s: %r\n",
-        __FUNCTION__,
-        Variable->Name,
-        Status
-        ));
+      // Retry Vars do not exist by default and should default to max
+      if ((VariableIndex == RF_RETRY_A) || (VariableIndex == RF_RETRY_B))
+      {
+        *Value = ROOTFS_RETRY_MAX;
+        Status = EFI_SUCCESS;
+      // The BootChainFwNext and BootChainFwStatus does not exist by default
+      } else if ((VariableIndex == RF_FW_NEXT) || (VariableIndex == RF_BC_STATUS)) {
+        DEBUG ((
+          DEBUG_INFO,
+           "%a: Info: %s is not found\n",
+          __FUNCTION__,
+          Variable->Name
+          ));
+        Status = EFI_SUCCESS;
+      } else {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Error getting %s: %r\n",
+          __FUNCTION__,
+          Variable->Name,
+          Status
+          ));
+      }
     }
   }
 
@@ -219,89 +225,6 @@ RFDeleteVariable (
 }
 
 /**
-  Initialize rootfs status register
-
-  @param[in]  RootfsSlot          Rootfs slot
-  @param[out] RegisterValueRf     Value of rootfs status register
-
-  @retval EFI_SUCCESS    The operation completed successfully.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-InitializeRootfsStatusReg (
-  IN  UINT32  RootfsSlot,
-  OUT UINT32  *RegisterValueRf
-  )
-{
-  EFI_STATUS  Status;
-  UINT32      RegisterValue;
-  UINT32      RetryCount;
-  UINT32      MaxRetryCount;
-  UINT32      RootfsStatus;
-
-  Status = GetRootfsStatusReg (&RegisterValue);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to get rootfs status register\n",
-      __FUNCTION__
-      ));
-    return Status;
-  }
-
-  if (SR_RF_MAGIC_GET (RegisterValue) == SR_RF_MAGIC) {
-    // Rootfs Status Reg has been properly set in previous boot
-    goto Exit;
-  }
-
-  // This is first boot. Initialize SR_RF
-  RegisterValue = 0;
-
-  // Set magic
-  RegisterValue = SR_RF_MAGIC_SET (RegisterValue);
-
-  RegisterValue = SR_RF_CURRENT_SLOT_SET (RootfsSlot, RegisterValue);
-
-  // Set retry count for rootfs A
-  MaxRetryCount = mRootfsInfo.RootfsVar[RF_RETRY_MAX].Value;
-  RootfsStatus  = mRootfsInfo.RootfsVar[RF_STATUS_A].Value;
-  if (RootfsStatus == NVIDIA_OS_STATUS_UNBOOTABLE) {
-    RetryCount = 0;
-  } else {
-    RetryCount = MaxRetryCount;
-  }
-
-  RegisterValue = SR_RF_RETRY_COUNT_A_SET (RetryCount, RegisterValue);
-
-  // Set retry count for rootfs B
-  RootfsStatus = mRootfsInfo.RootfsVar[RF_STATUS_B].Value;
-  if (RootfsStatus == NVIDIA_OS_STATUS_UNBOOTABLE) {
-    RetryCount = 0;
-  } else {
-    RetryCount = MaxRetryCount;
-  }
-
-  RegisterValue = SR_RF_RETRY_COUNT_B_SET (RetryCount, RegisterValue);
-
-  // Write Rootfs Status register
-  Status = SetRootfsStatusReg (RegisterValue);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to set Rootfs status register: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-  }
-
-Exit:
-  *RegisterValueRf = RegisterValue;
-  return Status;
-}
-
-/**
   Set rootfs status value to mRootfsInfo and set the update flag
 
   @param[in]  RootfsSlot      Current rootfs slot
@@ -357,9 +280,9 @@ GetRetryCountFrommRootfsInfo (
   }
 
   if (RootfsSlot == ROOTFS_SLOT_A) {
-    *RootfsRetryCount = mRootfsInfo.RetryCountSlotA;
+    *RootfsRetryCount = mRootfsInfo.RootfsVar[RF_RETRY_A].Value;
   } else {
-    *RootfsRetryCount = mRootfsInfo.RetryCountSlotB;
+    *RootfsRetryCount = mRootfsInfo.RootfsVar[RF_RETRY_B].Value;
   }
 
   return EFI_SUCCESS;
@@ -389,54 +312,14 @@ SetRetryCountTomRootfsInfo (
   }
 
   if (RootfsSlot == ROOTFS_SLOT_A) {
-    mRootfsInfo.RetryCountSlotA = RootfsRetryCount;
+    mRootfsInfo.RootfsVar[RF_RETRY_A].Value = RootfsRetryCount;
+    mRootfsInfo.RootfsVar[RF_RETRY_A].UpdateFlag = 1;
   } else {
-    mRootfsInfo.RetryCountSlotB = RootfsRetryCount;
+    mRootfsInfo.RootfsVar[RF_RETRY_B].Value = RootfsRetryCount;
+    mRootfsInfo.RootfsVar[RF_RETRY_B].UpdateFlag = 1;
   }
 
   return EFI_SUCCESS;
-}
-
-/**
-  Sync the Rootfs status register and mRootfsInfo variable according to
-  the specified direction
-
-  @param[in]     Direction          The sync up direction
-  @param[in/out] RegisterValue      The pointer of Rootfs Status register
-
-  @retval EFI_SUCCESS    The operation completed successfully.
-
-**/
-STATIC
-EFI_STATUS
-EFIAPI
-SyncSrRfAndmRootfsInfo (
-  IN  UINT32  Direction,
-  OUT UINT32  *RegisterValue
-  )
-{
-  EFI_STATUS  Status = EFI_SUCCESS;
-
-  switch (Direction) {
-    case FROM_REG_TO_VAR:
-      // Copy CurrentSlot, RetryCountA/B from Scratch Register to mRootfsInfo
-      mRootfsInfo.CurrentSlot = SR_RF_CURRENT_SLOT_GET (*RegisterValue);
-
-      mRootfsInfo.RetryCountSlotA = SR_RF_RETRY_COUNT_A_GET (*RegisterValue);
-      mRootfsInfo.RetryCountSlotB = SR_RF_RETRY_COUNT_B_GET (*RegisterValue);
-      break;
-    case FROM_VAR_TO_REG:
-      // Copy CurrentSlot, RetryCountA/B from mRootfsInfo to Scratch Register
-      *RegisterValue = SR_RF_CURRENT_SLOT_SET (mRootfsInfo.CurrentSlot, *RegisterValue);
-
-      *RegisterValue = SR_RF_RETRY_COUNT_A_SET (mRootfsInfo.RetryCountSlotA, *RegisterValue);
-      *RegisterValue = SR_RF_RETRY_COUNT_B_SET (mRootfsInfo.RetryCountSlotB, *RegisterValue);
-      break;
-    default:
-      break;
-  }
-
-  return Status;
 }
 
 /**
@@ -455,15 +338,8 @@ IsValidRootfs (
 {
   BOOLEAN  Status = TRUE;
 
-  if ((mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value == NVIDIA_OS_REDUNDANCY_BOOT_ONLY) &&
-      (mRootfsInfo.RootfsVar[RF_STATUS_A].Value == NVIDIA_OS_STATUS_UNBOOTABLE))
-  {
-    Status = FALSE;
-  }
-
-  if ((mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value == NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS) &&
-      (mRootfsInfo.RootfsVar[RF_STATUS_A].Value == NVIDIA_OS_STATUS_UNBOOTABLE) &&
-      (mRootfsInfo.RootfsVar[RF_STATUS_B].Value == NVIDIA_OS_STATUS_UNBOOTABLE))
+  if ((mRootfsInfo.RootfsVar[RF_STATUS_A].Value == ANDROIDLAUNCHER_STATUS_UNBOOTABLE) &&
+      (mRootfsInfo.RootfsVar[RF_STATUS_B].Value == ANDROIDLAUNCHER_STATUS_UNBOOTABLE))
   {
     Status = FALSE;
   }
@@ -628,7 +504,6 @@ ValidateRootfsStatus (
   )
 {
   EFI_STATUS  Status;
-  UINT32      RegisterValueRf;
   UINT32      NonCurrentSlot;
   UINT32      Index;
 
@@ -662,25 +537,6 @@ ValidateRootfsStatus (
     }
   }
 
-  // Initilize SR_RF if magic field of SR_RF is invalid
-  Status = InitializeRootfsStatusReg (BootParams->BootChain, &RegisterValueRf);
-  if (EFI_ERROR (Status)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "%a: Failed to initialize rootfs status register: %r\n",
-      __FUNCTION__,
-      Status
-      ));
-    goto Exit;
-  }
-
-  // Update the mRootfsInfo to the latest from: RootfsStatusReg and BootParams->BootChain
-  // Three fields are updated from SR_RF:
-  // 1. CurrentSlot
-  // 2. Retry Count A
-  // 3. Retry Count B
-  SyncSrRfAndmRootfsInfo (FROM_REG_TO_VAR, &RegisterValueRf);
-
   // When the BootChainOverride value is 0 or 1, the value is set to BootParams->BootChain
   // in ProcessBootParams(), before calling ValidateRootfsStatus()
   mRootfsInfo.CurrentSlot = BootParams->BootChain;
@@ -690,174 +546,74 @@ ValidateRootfsStatus (
   if (!IsValidRootfs ()) {
     BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
 
-    // Clear the SR_RF when boot to recovery kernel.
-    // Slot status can be set to normal via UEFI menu in next boot
-    // or via OTA.
-    Status = SetRootfsStatusReg (0x0);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to clear Rootfs status register: %r\n",
-        __FUNCTION__,
-        Status
-        ));
-    }
-
     return EFI_SUCCESS;
   }
 
   // Check redundancy level and validate rootfs status
-  switch (mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value) {
-    case NVIDIA_OS_REDUNDANCY_BOOT_ONLY:
-      // There is no rootfs B. Ensure to set rootfs slot to A.
-      if (mRootfsInfo.CurrentSlot != ROOTFS_SLOT_A) {
-        mRootfsInfo.CurrentSlot = ROOTFS_SLOT_A;
-      }
-
-      // If current slot is bootable, decrease slot RetryCount by 1 and go on boot;
-      // if current slot is unbootable, set slot status as unbootable and boot to recovery kernel.
-      if (IsRootfsSlotBootable (mRootfsInfo.CurrentSlot)) {
-        Status = DecreaseRootfsRetryCount (mRootfsInfo.CurrentSlot);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed to decrease the RetryCount of slot %d: %r\n",
-            __FUNCTION__,
-            mRootfsInfo.CurrentSlot,
-            Status
-            ));
-          goto Exit;
-        }
-      } else {
-        BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
-        Status               = SetStatusTomRootfsInfo (mRootfsInfo.CurrentSlot, NVIDIA_OS_STATUS_UNBOOTABLE);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
-            __FUNCTION__,
-            mRootfsInfo.CurrentSlot,
-            Status
-            ));
-          goto Exit;
-        }
-
-        // Clear the SR_RF when boot to recovery kernel.
-        // Slot status can be set to normal via UEFI menu in next boot
-        // or via OTA.
-        RegisterValueRf = 0x0;
-      }
-
-      break;
-    case NVIDIA_OS_REDUNDANCY_BOOT_ROOTFS:
-      // Redundancy for both bootloader and rootfs.
-      // If current slot is bootable, decrease slot RetryCount by 1 and go on boot;
-      // If current slot is unbootable, check non-current slot
-      if (IsRootfsSlotBootable (mRootfsInfo.CurrentSlot)) {
-        Status = DecreaseRootfsRetryCount (mRootfsInfo.CurrentSlot);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed to decrease the RetryCount of slot %d: %r\n",
-            __FUNCTION__,
-            mRootfsInfo.CurrentSlot,
-            Status
-            ));
-          goto Exit;
-        }
-      } else {
-        // Current slot is unbootable, set current slot status as unbootable.
-        Status = SetStatusTomRootfsInfo (mRootfsInfo.CurrentSlot, NVIDIA_OS_STATUS_UNBOOTABLE);
-        if (EFI_ERROR (Status)) {
-          DEBUG ((
-            DEBUG_ERROR,
-            "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
-            __FUNCTION__,
-            mRootfsInfo.CurrentSlot,
-            Status
-            ));
-          goto Exit;
-        }
-
-        // Check non-current slot
-        if (IsRootfsSlotBootable (NonCurrentSlot)) {
-          // Non-current slot is bootable, switch to it and decrease the RetryCount by 1.
-          // Change UEFI boot chain (BootParams->BootChain) will be done at the end of this function
-          mRootfsInfo.CurrentSlot = NonCurrentSlot;
-          Status                  = DecreaseRootfsRetryCount (NonCurrentSlot);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "%a: Failed to decrease the RetryCount of slot %d: %r\n",
-              __FUNCTION__,
-              NonCurrentSlot,
-              Status
-              ));
-            goto Exit;
-          }
-
-          // Rootfs slot is always linked with bootloader chain
-          mRootfsInfo.RootfsVar[RF_FW_NEXT].Value      = NonCurrentSlot;
-          mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag = 1;
-        } else {
-          // Non-current slot is unbootable, boot to recovery kernel.
-          BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
-          Status               = SetStatusTomRootfsInfo (NonCurrentSlot, NVIDIA_OS_STATUS_UNBOOTABLE);
-          if (EFI_ERROR (Status)) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
-              __FUNCTION__,
-              NonCurrentSlot,
-              Status
-              ));
-            goto Exit;
-          }
-
-          // Clear the SR_RF when boot to recovery kernel.
-          // Slot status can be set to normal via UEFI menu in next boot
-          // or via OTA.
-          RegisterValueRf = 0x0;
-        }
-      }
-
-      break;
-    default:
+  // Redundancy for both bootloader and rootfs.
+  // If current slot is bootable, decrease slot RetryCount by 1 and go on boot;
+  // If current slot is unbootable, check non-current slot
+  if (IsRootfsSlotBootable (mRootfsInfo.CurrentSlot)) {
+    Status = DecreaseRootfsRetryCount (mRootfsInfo.CurrentSlot);
+    if (EFI_ERROR (Status)) {
       DEBUG ((
         DEBUG_ERROR,
-        "%a: Unsupported A/B redundancy level: %d\n",
+        "%a: Failed to decrease the RetryCount of slot %d: %r\n",
         __FUNCTION__,
-        mRootfsInfo.RootfsVar[RF_REDUNDANCY].Value
+        mRootfsInfo.CurrentSlot,
+        Status
         ));
-      break;
+      goto Exit;
+    }
+    Status = SetStatusTomRootfsInfo (mRootfsInfo.CurrentSlot, ANDROIDLAUNCHER_STATUS_BOOTING);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
+        __FUNCTION__,
+        mRootfsInfo.CurrentSlot,
+        Status
+        ));
+      goto Exit;
+    }
+  } else {
+    // Current slot is unbootable, set current slot status as unbootable.
+    Status = SetStatusTomRootfsInfo (mRootfsInfo.CurrentSlot, ANDROIDLAUNCHER_STATUS_UNBOOTABLE);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
+        __FUNCTION__,
+        mRootfsInfo.CurrentSlot,
+        Status
+        ));
+      goto Exit;
+    }
+
+    // Check non-current slot
+    if (IsRootfsSlotBootable (NonCurrentSlot)) {
+      // Rootfs slot is always linked with bootloader chain
+      mRootfsInfo.RootfsVar[RF_FW_NEXT].Value      = NonCurrentSlot;
+      mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag = 1;
+    } else {
+      // Non-current slot is unbootable, boot to recovery kernel.
+      BootParams->BootMode = NVIDIA_L4T_BOOTMODE_RECOVERY;
+      Status               = SetStatusTomRootfsInfo (NonCurrentSlot, ANDROIDLAUNCHER_STATUS_UNBOOTABLE);
+      if (EFI_ERROR (Status)) {
+        DEBUG ((
+          DEBUG_ERROR,
+          "%a: Failed to set Rootfs status of slot %d to mRootfsInfo: %r\n",
+          __FUNCTION__,
+          NonCurrentSlot,
+          Status
+          ));
+        goto Exit;
+      }
+    }
   }
 
 Exit:
   if (Status == EFI_SUCCESS) {
-    // Sync mRootfsInfo to RootfsStatusReg and save to register
-    Status = SyncSrRfAndmRootfsInfo (FROM_VAR_TO_REG, &RegisterValueRf);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to sync mRootfsInfo to Rootfs status register: %r\n",
-        __FUNCTION__,
-        Status
-        ));
-      return Status;
-    }
-
-    Status = SetRootfsStatusReg (RegisterValueRf);
-    if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Failed to set Rootfs status register (0x%x): %r\n",
-        __FUNCTION__,
-        RegisterValueRf,
-        Status
-        ));
-      return Status;
-    }
-
     // Update BootParams->BootChain
     BootParams->BootChain = mRootfsInfo.CurrentSlot;
 
@@ -874,18 +630,6 @@ Exit:
 
     // Trigger a reset to switch the BootChain if the UpdateFlag of BootChainFwNext is 1
     if (mRootfsInfo.RootfsVar[RF_FW_NEXT].UpdateFlag) {
-      // Clear the rootfs status register before issuing a reset
-      Status = SetRootfsStatusReg (0x0);
-      if (EFI_ERROR (Status)) {
-        DEBUG ((
-          DEBUG_ERROR,
-          "%a: Failed to clear Rootfs status register: %r\n",
-          __FUNCTION__,
-          Status
-          ));
-        return Status;
-      }
-
       // Clear the BootChainFwStatus variable if it exists
       RFDeleteVariable (RF_BC_STATUS);
 
